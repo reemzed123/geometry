@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>מחולל צורות גיאומטריות</title>
+<style>
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#eef2f5;margin:0;padding:16px;color:#222}
+.app{display:flex;gap:16px;max-width:1300px;margin:0 auto;background:#fff;padding:18px;border-radius:12px;box-shadow:0 4px 20px #0001}
+.ctl{flex:1;max-width:470px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-left:8px}
+.pv{flex:1.3;display:flex;flex-direction:column;align-items:center;background:#fafafa;border:2px dashed #bbb;border-radius:8px;padding:12px}
+h2{margin:0;color:#0056b3;font-size:20px}.g{background:#f8f9fa;padding:10px;border-radius:8px;border:1px solid #e2e8f0}
+.g h3{margin:0 0 6px;font-size:14px;border-bottom:1px solid #cbd5e1}
+label{display:block;margin:6px 0 2px;font-weight:600;font-size:12px;color:#475569}
+input[type=text],input[type=number],select{width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;box-sizing:border-box;font-size:14px}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 8px}
+.ck{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px}.ck input{margin:0}.ck label{margin:0;font-weight:500}
+button{background:#16a34a;color:#fff;border:0;padding:10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700}
+button.b{background:#2563eb}button.y{background:#64748b}button.s{padding:5px 9px;font-size:12px;margin-top:6px}
+.row{display:flex;gap:6px;align-items:center;margin-top:6px}.row select{flex:1}.row button{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{padding:5px 10px;border-radius:14px;background:#e2e8f0;cursor:pointer;font-size:13px}.chip.on{background:#2563eb;color:#fff}
+.tabs{display:flex;gap:6px;max-width:1300px;margin:0 auto 10px}.tabs button{flex:1;background:#cbd5e1;color:#222}.tabs button.on{background:#0056b3;color:#fff}
+canvas{background:#fff;border:1px solid #cbd5e1;border-radius:6px;width:720px;max-width:100%;height:auto;touch-action:none;cursor:grab}
+.btns{display:flex;gap:6px;width:100%;max-width:720px;margin-top:10px}.btns button{flex:1}
+#st{min-height:18px;font-size:13px;font-weight:600;margin-top:6px}#st.ok{color:#15803d}#st.er{color:#b91c1c}
+#info{font-size:13px;line-height:1.7;width:100%;max-width:720px;margin-top:6px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;box-sizing:border-box}
+.nt{color:#b45309}#hs{display:none;max-width:1300px;margin:0 auto;background:#fff;padding:18px;border-radius:12px}
+.hist{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:10px}.hc{border:1px solid #cbd5e1;border-radius:8px;padding:6px;font-size:12px}.hc img{width:100%;border-radius:4px;border:1px solid #e2e8f0}
+@media(max-width:900px){.app{flex-direction:column}.ctl{max-width:none;max-height:none;overflow:visible}}
+</style></head><body>
+<div class="tabs"><button id="t0" class="on" onclick="tab(0)">עורך</button><button id="t1" onclick="tab(1)">היסטוריה</button></div>
+<div class="app" id="ed"><div class="ctl">
+<h2>מחולל צורות גיאומטריות</h2>
+<div class="g"><h3>צורות בסצנה (גרור בקנבס להזזה)</h3><div id="chips" class="chips"></div><div id="sh"></div></div>
+<div class="g"><h3>קווי עזר</h3><div id="ax"></div><button class="s b" onclick="addAx()">＋ קו עזר</button></div>
+<div class="g"><h3>מעגלים</h3><div id="ci"></div><button class="s b" onclick="addEx()">＋ רדיוס / קוטר</button></div>
+<div class="g"><h3>תצוגה, צירים וייצוא</h3><div id="glob"></div><button class="s y" onclick="fit()">התאם תצוגה לצורות</button></div>
+</div>
+<div class="pv"><canvas id="cv"></canvas>
+<div class="btns"><button onclick="copy()">📋 העתק ל-Word</button><button class="b" onclick="dlPng()">⬇ PNG</button><button class="b" onclick="dlSvg()">⬇ SVG</button><button class="y" onclick="saveHist()">💾 להיסטוריה</button></div>
+<div id="st"></div><div id="info"></div></div></div>
+<div id="hs"><h2>היסטוריית צורות</h2><button class="s y" onclick="hist=[];persist();renderHist()">נקה הכל</button><div class="hist" id="hl"></div></div>
+<script>
+const W=720,H=520,$=id=>document.getElementById(id),FONT='"Times New Roman","David",serif';
+const cv=$('cv'),ctx=cv.getContext('2d'),DPR=Math.min(devicePixelRatio||1,3);cv.width=W*DPR;cv.height=H*DPR;
+const mc=document.createElement('canvas').getContext('2d');
+const P=(x,y)=>({x,y}),rad=d=>d*Math.PI/180,deg=r=>r*180/Math.PI,sub=(a,b)=>P(a.x-b.x,a.y-b.y),add=(a,b)=>P(a.x+b.x,a.y+b.y),mul=(a,k)=>P(a.x*k,a.y*k),len=a=>Math.hypot(a.x,a.y),unit=a=>{const l=len(a)||1;return P(a.x/l,a.y/l)},dot=(a,b)=>a.x*b.x+a.y*b.y,cross=(a,b)=>a.x*b.y-a.y*b.x,mid=(a,b)=>P((a.x+b.x)/2,(a.y+b.y)/2);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),fN=v=>String(Math.round(v*100)/100),fA=v=>Math.round(v*10)/10+'°';
+const A=(id,l,v,a=1,b=179)=>[id,l,v,a,b],N=(id,l,v)=>[id,l,v,.1,1e4],cen=Q=>P(Q.reduce((t,p)=>t+p.x,0)/Q.length,Q.reduce((t,p)=>t+p.y,0)/Q.length);
+const SH={
+triangle_general:{n:'משולש כללי',f:[N('len','בסיס AB',10),A('angA','זווית A',50,.5,178),A('angB','זווית B',60,.5,178)],b(v){if(v.angA+v.angB>=179.5)throw Error('A+B חייב להיות קטן מ-180°');const a=rad(v.angA),b=rad(v.angB),q=v.len*Math.sin(b)/Math.sin(Math.PI-a-b);return[P(0,0),P(v.len,0),P(q*Math.cos(a),q*Math.sin(a))]}},
+triangle_right:{n:'משולש ישר זווית',f:[['rt','זווית ישרה ב',['C','A','B']],N('len','בסיס AB',10),A('ang','זווית חדה (A, או B אם הישרה ב-A)',30,1,89)],b(v){const t=rad(v.ang);if(v.rt=='C'){const q=v.len*Math.cos(t);return[P(0,0),P(v.len,0),P(q*Math.cos(t),q*Math.sin(t))]}return[P(0,0),P(v.len,0),P(v.rt=='A'?0:v.len,v.len*Math.tan(t))]}},
+triangle_iso:{n:'משולש שווה שוקיים',f:[N('len','בסיס AB',10),A('ang','זווית בסיס',50,1,89)],b:v=>[P(0,0),P(v.len,0),P(v.len/2,v.len/2*Math.tan(rad(v.ang)))]},
+triangle_equi:{n:'משולש שווה צלעות',f:[N('len','אורך צלע',10)],b:v=>[P(0,0),P(v.len,0),P(v.len/2,v.len*Math.sqrt(3)/2)]},
+trapezoid_gen:{n:'טרפז כללי',f:[N('a','בסיס תחתון AB',10),N('b','בסיס עליון DC',6),N('h','גובה',5),A('angA','זווית A',65)],b(v){const d=v.h/Math.tan(rad(v.angA));return[P(0,0),P(v.a,0),P(d+v.b,v.h),P(d,v.h)]}},
+trapezoid_iso:{n:'טרפז שווה שוקיים',f:[N('a','בסיס תחתון AB',10),N('b','בסיס עליון DC',6),N('h','גובה',5)],b:v=>[P(0,0),P(v.a,0),P((v.a+v.b)/2,v.h),P((v.a-v.b)/2,v.h)]},
+trapezoid_right:{n:'טרפז ישר זווית',f:[N('a','בסיס תחתון AB',10),N('b','בסיס עליון DC',6),N('h','גובה AD',5)],b:v=>[P(0,0),P(v.a,0),P(v.b,v.h),P(0,v.h)]},
+parallelogram:{n:'מקבילית',f:[N('a','בסיס AB',10),N('s','צלע AD',6),A('angA','זווית A',60)],b(v){const D=P(v.s*Math.cos(rad(v.angA)),v.s*Math.sin(rad(v.angA)));return[P(0,0),P(v.a,0),P(v.a+D.x,D.y),D]}},
+rhombus:{n:'מעוין',f:[N('a','אורך צלע',8),A('angA','זווית A',60)],b(v){const D=P(v.a*Math.cos(rad(v.angA)),v.a*Math.sin(rad(v.angA)));return[P(0,0),P(v.a,0),P(v.a+D.x,D.y),D]}},
+kite:{n:'דלתון',f:[N('d1','אלכסון אנכי AC',10),N('d2','אלכסון אופקי BD',7),N('t','מרחק C מהאלכסון האופקי',3)],b(v){if(v.t>=v.d1)throw Error('המרחק מ-C חייב להיות קטן מ-AC');return[P(0,0),P(v.d2/2,v.d1-v.t),P(0,v.d1),P(-v.d2/2,v.d1-v.t)]}},
+rectangle:{n:'מלבן / ריבוע',f:[N('w','רוחב',10),N('h','גובה',6)],b:v=>[P(0,0),P(v.w,0),P(v.w,v.h),P(0,v.h)]},
+regular_poly:{n:'מצולע משוכלל',f:[A('n','מספר צלעות',6,3,12),N('s','אורך צלע',6)],b(v){const n=Math.round(v.n),R=v.s/(2*Math.sin(Math.PI/n));return Array.from({length:n},(_,i)=>{const t=rad(-90-180/n)+i*2*Math.PI/n;return P(R*Math.cos(t),R*Math.sin(t))})}}};
+const CK=[['axes','מערכת צירים',0],['grid','רשת',0],['snap','הצמדה בגרירה (חצי יחידה)',1],['bw','שחור-לבן',0],['fill','מילוי צבע',0],['ital','אותיות נטויות',1],['tr','רקע שקוף בייצוא',0],['showLen','הצג אורכי צלעות',0],['showAng','הצג זוויות במעלות',0],['arcs','קשת בכל קודקוד',0],['ticks','סמן צלעות שוות',0],['rsq','90° כריבוע',1]];
+const NU=[['sc','פיקסלים ליחידה',30],['fs','גודל גופן',16],['lw','עובי קו',2.5],['cm','רוחב ייצוא בס״מ (0=טבעי)',0]];
+const AUXT=[['height','גובה'],['median','תיכון'],['bisector','חוצה זווית'],['diagonals','אלכסונים'],['midsegment','קו אמצעים']];
+let sh=[],cur=0,view={s:30,x:80,y:H-60},notes=[],scene=null,hits=[],hist=[];
+try{hist=JSON.parse(localStorage.getItem('geoHist')||'[]')}catch(e){}
+const mk=i=>({type:'triangle_general',v:{},ox:i*12,oy:0,rot:0,mir:0,lab:'A,B,C,D,E,F,G,H,I,J,K,L'.split(',').map(x=>x+(i?'₁₂₃₄₅₆₇₈₉'[i-1]||'':'')).join(','),sd:'',an:'',aux:[],cc:0,ic:0,ex:[]});
+const LB=s=>(s.lab||'').split(/[,;\s]+/).filter(Boolean);
+function O(){const o={};CK.forEach(c=>o[c[0]]=$(c[0]).checked);NU.forEach(c=>{const x=parseFloat($(c[0]).value);o[c[0]]=isFinite(x)?x:c[2]});
+o.fs=Math.max(10,Math.min(40,o.fs));o.lw=Math.max(1,Math.min(8,o.lw));o.sc=Math.max(2,o.sc);
+o.col=o.bw?{sh:'#000',sd:'#000',an:'#000',ax:'#000',vt:'#000',mk:'#000',fill:'#f0f0f0',ci:'#000',gr:'#ddd'}:{sh:'#1e293b',sd:'#15803d',an:'#b91c1c',ax:'#dc2626',vt:'#0f172a',mk:'#1e293b',fill:'#e6effd',ci:'#2563eb',gr:'#e2e8f0'};return o}
+function world(s){const d=SH[s.type],v={};for(const f of d.f){const sl=Array.isArray(f[2]),x=s.v[f[0]]??(sl?f[2][0]:f[2]);if(sl){v[f[0]]=x;continue}const y=parseFloat(x);if(!isFinite(y))throw Error('יש להזין מספר ב"'+f[1]+'"');if(y<f[3]||y>f[4])throw Error('"'+f[1]+'" חייב להיות בין '+f[3]+' ל-'+f[4]);v[f[0]]=y}
+let p=d.b(v);if(s.mir)p=p.map(q=>P(-q.x,q.y));const r=rad(s.rot||0),c=Math.cos(r),n=Math.sin(r);return p.map(q=>P(s.ox+q.x*c-q.y*n,s.oy+q.x*n+q.y*c))}
+const nOf=s=>{try{return world(s).length}catch(e){return 3}},X=p=>P(view.x+p.x*view.s,view.y-p.y*view.s);
+const fontStr=e=>`${e.italic?'italic ':''}${e.size}px ${FONT}`,textW=e=>{mc.font=fontStr(e);return mc.measureText(e.s).width};
+const heb=s=>/[\u0590-\u05FF]/.test(s);
+function arc(S,V,d1,d2,r,c,w){const a=Math.atan2(d1.y,d1.x);let d=Math.atan2(d2.y,d2.x)-a;while(d>Math.PI)d-=2*Math.PI;while(d<=-Math.PI)d+=2*Math.PI;S.push({t:'arc',cx:V.x,cy:V.y,r,a0:a,d,stroke:c,w})}
+function ticks(S,a,b,k,c){const m=mid(a,b),d=unit(sub(b,a)),n=P(-d.y,d.x);for(let j=0;j<k;j++){const q=add(m,mul(d,(j-(k-1)/2)*5));S.push({t:'line',x1:q.x-n.x*6,y1:q.y-n.y*6,x2:q.x+n.x*6,y2:q.y+n.y*6,stroke:c,w:1.8})}}
+function grp(n,eq){const g=[];for(let i=0;i<n;i++){const h=g.find(h=>eq(h[0],i));h?h.push(i):g.push([i])}return g.filter(h=>h.length>1)}
+function aux(S,Q,n,a,o){const C=o.col,lw=Math.max(1.4,o.lw*.7),Ln=(p,q)=>S.push({t:'line',x1:p.x,y1:p.y,x2:q.x,y2:q.y,stroke:C.ax,w:lw,dash:[6,4]});
+if(a.t=='diagonals'){if(n<4)return notes.push('אלכסונים: מרובעים ומעלה');for(let i=0;i<n;i++)for(let j=i+2;j<n;j++)if(!(i==0&&j==n-1))Ln(Q[i],Q[j]);return}
+if(a.t=='midsegment'){if(n!=4)return notes.push('קו אמצעים: מרובעים בלבד');return Ln(mid(Q[1],Q[2]),mid(Q[3],Q[0]))}
+const vi=Math.min(a.v|0,n-1),V=Q[vi];
+if(a.t=='bisector'){const b=unit(add(unit(sub(Q[(vi+n-1)%n],V)),unit(sub(Q[(vi+1)%n],V))));let best=1e9;for(let j=0;j<n;j++){if(j==vi||(j+1)%n==vi)continue;const q1=Q[j],e=sub(Q[(j+1)%n],q1),q=sub(q1,V),dn=cross(b,e);if(Math.abs(dn)<1e-9)continue;const t=cross(q,e)/dn,u=cross(q,b)/dn;if(t>1e-6&&u>=-1e-9&&u<=1+1e-9&&t<best)best=t}return best<1e9&&Ln(V,add(V,mul(b,best)))}
+const si=n==3?(vi+1)%3:n==4?(vi<2?2:0):(vi+(n>>1))%n,p1=Q[si],p2=Q[(si+1)%n],d=unit(sub(p2,p1)),sl=len(sub(p2,p1));
+if(a.t=='median')return Ln(V,mid(p1,p2));
+const t=dot(sub(V,p1),d),F=add(p1,mul(d,t));if(len(sub(V,F))<1e-6)return notes.push('הגובה מתלכד עם צלע');
+if(t<-1e-6)Ln(p1,F);if(t>sl+1e-6)Ln(p2,F);Ln(V,F);
+if(o.rsq){const u=unit(sub(V,F)),w0=sub(mid(p1,p2),F),w=len(w0)<1e-6?d:unit(w0),z=9;S.push({t:'poly',pts:[add(F,mul(u,z)),add(add(F,mul(u,z)),mul(w,z)),add(F,mul(w,z))],close:0,stroke:C.ax,w:1.6,fill:null})}}
+function circles(S,s,Q,n,o){const C=o.col,cs={},nc=s.cc||s.ex.some(e=>e.c=='cc'),ni=s.ic||s.ex.some(e=>e.c=='ic'),lw=Math.max(1.4,o.lw*.7);
+if(nc){const[a,b,c]=Q,d=2*(a.x*(b.y-c.y)+b.x*(c.y-a.y)+c.x*(a.y-b.y)),q=p=>p.x*p.x+p.y*p.y;if(Math.abs(d)>1e-9){const u=P((q(a)*(b.y-c.y)+q(b)*(c.y-a.y)+q(c)*(a.y-b.y))/d,(q(a)*(c.x-b.x)+q(b)*(a.x-c.x)+q(c)*(b.x-a.x))/d),r=len(sub(a,u));if(Q.every(p=>Math.abs(len(sub(p,u))-r)<1e-3*r))cs.cc={u,r}}if(!cs.cc)notes.push('אין מעגל חוסם לצורה זו (חייבת להיות ציקלית)')}
+if(ni){let u;if(n==3){const[a,b,c]=Q,la=len(sub(b,c)),lb=len(sub(a,c)),lc=len(sub(a,b));u=mul(add(add(mul(a,la),mul(b,lb)),mul(c,lc)),1/(la+lb+lc))}else u=cen(Q);
+const ds=i=>{const p=Q[i],q=Q[(i+1)%n];return Math.abs(cross(sub(q,p),sub(u,p)))/len(sub(q,p))},r=ds(0);if(Q.every((_,i)=>Math.abs(ds(i)-r)<1e-3*r))cs.ic={u,r};else notes.push('אין מעגל חסום לצורה זו')}
+['cc','ic'].forEach(k=>{if(s[k]&&cs[k])S.push({t:'circ',cx:cs[k].u.x,cy:cs[k].u.y,r:cs[k].r,stroke:C.ci,w:lw,fill:null})});
+s.ex.forEach(e=>{const k=cs[e.c];if(!k)return;const v=Math.min(e.v|0,n-1);let p;if(e.c=='cc')p=Q[v];else{const a=Q[v],d=unit(sub(Q[(v+1)%n],a));p=add(a,mul(d,dot(sub(k.u,a),d)))}
+const q=e.k=='d'?sub(mul(k.u,2),p):k.u;S.push({t:'line',x1:p.x,y1:p.y,x2:q.x,y2:q.y,stroke:C.ci,w:lw});S.push({t:'circ',cx:k.u.x,cy:k.u.y,r:2.5,stroke:C.ci,w:1,fill:C.ci})})}
+function shapeScene(S,s,pts,o,idx){const n=pts.length,Q=pts.map(X),C=o.col,L=LB(s),l=i=>L[i%n]||'#'+(i%n+1),cn=cen(Q),Ls=pts.map((p,i)=>len(sub(pts[(i+1)%n],p)));hits[idx]=Q;
+S.push({t:'poly',pts:Q,close:1,stroke:C.sh,w:o.lw,fill:o.fill?C.fill:null});
+s.aux.forEach(a=>aux(S,Q,n,a,o));circles(S,s,Q,n,o);
+if(o.ticks)grp(n,(i,j)=>Math.abs(Ls[i]-Ls[j])<=1e-5*Math.max(Ls[i],Ls[j])).forEach((g,k)=>g.forEach(i=>ticks(S,Q[i],Q[(i+1)%n],Math.min(k+1,4),C.mk)));
+const ta=(s.an||'').split(',').map(x=>x.trim()),ts=(s.sd||'').split(',').map(x=>x.trim()),bd=[];
+for(let i=0;i<n;i++){const V=Q[i],pv=Q[(i+n-1)%n],nx=Q[(i+1)%n],v1=unit(sub(pv,V)),v2=unit(sub(nx,V)),ang=deg(Math.acos(Math.max(-1,Math.min(1,dot(v1,v2))))),adj=Math.min(len(sub(pv,V)),len(sub(nx,V))),sm=add(v1,v2),hb=len(sm)>1e-6,bis=hb?unit(sm):P(0,0);
+bd.push(hb?mul(bis,-1):unit(sub(V,cn)));const us=ta[i]||'',tx=us!==''?us:(o.showAng?fA(ang):'');if(!(o.arcs||o.showAng||us!=='')||!hb)continue;
+if(Math.abs(ang-90)<.05&&o.rsq){const z=Math.min(14,adj*.3);S.push({t:'poly',pts:[add(V,mul(v1,z)),add(V,mul(add(v1,v2),z)),add(V,mul(v2,z))],close:0,stroke:C.an,w:1.8,fill:null})}else arc(S,V,v1,v2,Math.min(26,adj*.35),C.an,1.8);
+if(tx){const base=ang>=100?34:ang>=75?38:ang>=50?46:ang>=30?58:72,p=add(V,mul(bis,base+(o.fs-16)*.8));S.push({t:'text',x:p.x,y:p.y,s:tx,size:o.fs,color:C.an,italic:us!==''&&o.ital})}}
+for(let i=0;i<n;i++){const e={t:'text',s:l(i),size:o.fs+3,color:C.vt,italic:o.ital},out=bd[i],off=10+Math.abs(out.x)*textW(e)/2+Math.abs(out.y)*e.size*.55,p=add(Q[i],mul(out,off));e.x=p.x;e.y=p.y;S.push(e)}
+for(let i=0;i<n;i++){const ty=ts[i]||'',tx=ty!==''?ty:(o.showLen?fN(Ls[i]):'');if(!tx)continue;const a=Q[i],b=Q[(i+1)%n],m=mid(a,b),d=unit(sub(b,a));let nr=P(-d.y,d.x);if(dot(nr,sub(m,cn))<0)nr=mul(nr,-1);
+const e={t:'text',s:tx,size:o.fs,color:C.sd,italic:ty!==''&&o.ital},off=8+Math.abs(nr.x)*textW(e)/2+Math.abs(nr.y)*o.fs*.55,p=add(m,mul(nr,off));e.x=p.x;e.y=p.y;S.push(e)}}
+function axes(S,o){const C=o.col,k=view.s,x0=view.x,y0=view.y,st=Math.max(1,Math.ceil(28/k)),Ln=(a,b,c,d,col,w)=>S.push({t:'line',x1:a,y1:b,x2:c,y2:d,stroke:col,w}),T=(x,y,s,i)=>S.push({t:'text',x,y,s,size:12,color:'#334155',italic:!!i});
+for(let i=Math.ceil(-x0/k/st);x0+i*st*k<=W;i++){const x=x0+i*st*k;if(o.grid)Ln(x,0,x,H,C.gr,1);if(o.axes&&i){Ln(x,y0-4,x,y0+4,'#334155',1);T(x,y0+15,fN(i*st))}}
+for(let j=Math.ceil((y0-H)/k/st);y0-j*st*k>=0;j++){const y=y0-j*st*k;if(o.grid)Ln(0,y,W,y,C.gr,1);if(o.axes&&j){Ln(x0-4,y,x0+4,y,'#334155',1);T(x0-14,y,fN(j*st))}}
+if(o.axes){Ln(0,y0,W-2,y0,'#334155',1.5);Ln(x0,H,x0,2,'#334155',1.5);S.push({t:'poly',pts:[P(W-10,y0-4),P(W-2,y0),P(W-10,y0+4)],close:0,stroke:'#334155',w:1.5,fill:null},{t:'poly',pts:[P(x0-4,10),P(x0,2),P(x0+4,10)],close:0,stroke:'#334155',w:1.5,fill:null});T(W-12,y0-14,'x',1);T(x0+14,12,'y',1);T(x0-10,y0+14,'O')}}
+function paint(g,S,k){g.save();g.scale(k,k);g.lineJoin=g.lineCap='round';for(const e of S){if(e.t=='poly'){g.beginPath();e.pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));if(e.close)g.closePath();if(e.fill){g.fillStyle=e.fill;g.fill()}g.setLineDash([]);g.strokeStyle=e.stroke;g.lineWidth=e.w;g.stroke()}
+else if(e.t=='line'){g.beginPath();g.moveTo(e.x1,e.y1);g.lineTo(e.x2,e.y2);g.setLineDash(e.dash||[]);g.strokeStyle=e.stroke;g.lineWidth=e.w;g.stroke();g.setLineDash([])}
+else if(e.t=='arc'){g.beginPath();g.setLineDash([]);g.arc(e.cx,e.cy,e.r,e.a0,e.a0+e.d,e.d<0);g.strokeStyle=e.stroke;g.lineWidth=e.w;g.stroke()}
+else if(e.t=='circ'){g.beginPath();g.setLineDash([]);g.arc(e.cx,e.cy,e.r,0,7);if(e.fill){g.fillStyle=e.fill;g.fill()}g.strokeStyle=e.stroke;g.lineWidth=e.w;g.stroke()}
+else{g.font=fontStr(e);g.fillStyle=e.color;g.textAlign='center';g.textBaseline='middle';g.direction=heb(e.s)?'rtl':'ltr';g.fillText(e.s,e.x,e.y)}}g.restore()}
+const vang=(p,i)=>{const n=p.length,a=unit(sub(p[(i+n-1)%n],p[i])),b=unit(sub(p[(i+1)%n],p[i]));return deg(Math.acos(Math.max(-1,Math.min(1,dot(a,b)))))};
+function draw(){const o=O();view.s=o.sc;hits=[];notes=[];const S=[];if(o.axes||o.grid)axes(S,o);let ok=0,info='';
+sh.forEach((s,i)=>{try{const pts=world(s),n=pts.length,L=LB(s),l=k=>L[k%n]||'#'+(k%n+1);shapeScene(S,s,pts,o,i);ok++;
+info+=`<div><b>צורה ${i+1}:</b> <span dir="ltr">`+pts.map((_,k)=>`${esc(l(k))}=${fA(vang(pts,k))}`).join(' · ')+' | '+pts.map((p,k)=>`${esc(l(k))}${esc(l(k+1))}=${fN(len(sub(pts[(k+1)%n],p)))}`).join(' · ')+'</span></div>'}catch(e){notes.push('צורה '+(i+1)+': '+e.message)}});
+scene=ok?S:null;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);if(ok)paint(ctx,S,DPR);
+notes.forEach(t=>info+=`<div class="nt">⚠ ${esc(t)}</div>`);$('info').innerHTML=info}
+// ---- בקרים ----
+const U=(k,v)=>{sh[cur][k]=v;draw()},V=(k,v)=>{sh[cur].v[k]=v;draw()},AX=(i,k,v)=>{sh[cur].aux[i][k]=v;renderCtl();draw()},EX=(i,k,v)=>{sh[cur].ex[i][k]=v;renderCtl();draw()};
+const sel=i=>{cur=i;renderCtl();draw()},addS=()=>{sh.push(mk(sh.length));cur=sh.length-1;renderCtl();fit()},dup=()=>{const c=JSON.parse(JSON.stringify(sh[cur]));c.ox+=3;sh.push(c);cur=sh.length-1;renderCtl();draw()},rem=()=>{sh.splice(cur,1);cur=Math.max(0,cur-1);renderCtl();draw()};
+const setType=t=>{sh[cur].type=t;sh[cur].v={};sh[cur].aux=[];sh[cur].ex=[];renderCtl();fit()},addAx=()=>{sh[cur].aux.push({t:'height',v:2});renderCtl();draw()},addEx=()=>{sh[cur].ex.push({k:'r',c:'cc',v:0});renderCtl();draw()},DEL=(k,i)=>{sh[cur][k].splice(i,1);renderCtl();draw()};
+function renderCtl(){const s=sh[cur],n=nOf(s),L=LB(s),nm=i=>L[i%n]||'#'+(i%n+1),vo=(z,sd)=>Array.from({length:n},(_,i)=>`<option value=${i}${i==z?' selected':''}>${esc(sd?nm(i)+nm(i+1):nm(i))}</option>`).join(''),op=(arr,z)=>arr.map(([k,t])=>`<option value=${k}${k==z?' selected':''}>${t}</option>`).join('');
+$('chips').innerHTML=sh.map((x,i)=>`<b class="chip${i==cur?' on':''}" onclick="sel(${i})">${i+1}. ${SH[x.type].n}</b>`).join('')+'<b class="chip" onclick="addS()">＋ צורה</b><b class="chip" onclick="dup()">⧉ שכפל</b>'+(sh.length>1?'<b class="chip" onclick="rem()">🗑 מחק</b>':'');
+$('sh').innerHTML=`<label>סוג צורה</label><select onchange="setType(this.value)">${Object.keys(SH).map(k=>`<option value=${k}${k==s.type?' selected':''}>${SH[k].n}</option>`).join('')}</select>`+SH[s.type].f.map(f=>Array.isArray(f[2])?`<label>${f[1]}</label><select onchange="V('${f[0]}',this.value)">${f[2].map(o=>`<option${(s.v[f[0]]??f[2][0])==o?' selected':''}>${o}</option>`).join('')}</select>`:`<label>${f[1]}</label><input type=number step=any min=${f[3]} max=${f[4]} value="${s.v[f[0]]??f[2]}" oninput="V('${f[0]}',this.value)">`).join('')
++`<div class=r3><div><label>X של A</label><input type=number step=any id=ox value="${s.ox}" oninput="U('ox',parseFloat(this.value)||0)"></div><div><label>Y של A</label><input type=number step=any id=oy value="${s.oy}" oninput="U('oy',parseFloat(this.value)||0)"></div><div><label>סיבוב°</label><input type=number step=any value="${s.rot}" oninput="U('rot',parseFloat(this.value)||0)"></div></div>`
++`<div class=ck><input type=checkbox id=mi ${s.mir?'checked':''} onchange="U('mir',this.checked?1:0)"><label for=mi>היפוך אופקי</label></div><label>אותיות קודקודים</label><input type=text value="${esc(s.lab)}" oninput="U('lab',this.value)" onchange="renderCtl()"><div class=r2><div><label>ערכי צלעות (ריק=אוטומטי)</label><input type=text value="${esc(s.sd)}" oninput="U('sd',this.value)"></div><div><label>ערכי זוויות</label><input type=text value="${esc(s.an)}" oninput="U('an',this.value)"></div></div>`;
+$('ax').innerHTML=s.aux.map((a,i)=>`<div class=row><select onchange="AX(${i},'t',this.value)">${op(AUXT,a.t)}</select><select ${['diagonals','midsegment'].includes(a.t)?'disabled':''} onchange="AX(${i},'v',this.value)">${vo(a.v)}</select><button class="s y" onclick="DEL('aux',${i})">✕</button></div>`).join('')||'<small>אין קווי עזר</small>';
+$('ci').innerHTML=`<div class=ck><input type=checkbox id=cc ${s.cc?'checked':''} onchange="U('cc',this.checked?1:0)"><label for=cc>מעגל חוסם</label></div><div class=ck><input type=checkbox id=ic ${s.ic?'checked':''} onchange="U('ic',this.checked?1:0)"><label for=ic>מעגל חסום</label></div>`
++s.ex.map((e,i)=>`<div class=row><select onchange="EX(${i},'k',this.value)">${op([['r','רדיוס'],['d','קוטר']],e.k)}</select><select onchange="EX(${i},'c',this.value)">${op([['cc','בחוסם'],['ic','בחסום']],e.c)}</select><select onchange="EX(${i},'v',this.value)">${vo(e.v,e.c=='ic')}</select><button class="s y" onclick="DEL('ex',${i})">✕</button></div>`).join('')+'<small>בחוסם: אל קודקוד. בחסום: אל נקודת ההשקה בצלע.</small>'}
+$('glob').innerHTML='<div class=r2>'+NU.map(c=>`<div><label>${c[1]}</label><input type=number step=any id=${c[0]} value=${c[2]} oninput="draw()"></div>`).join('')+'</div>'+CK.map(c=>`<div class=ck><input type=checkbox id=${c[0]} ${c[2]?'checked':''} onchange="draw()"><label for=${c[0]}>${c[1]}</label></div>`).join('');
+function fit(){const o=O(),ps=[];sh.forEach(s=>{try{ps.push(...world(s))}catch(e){}});if(!ps.length)return draw();if(o.axes)ps.push(P(0,0));let a=1e9,b=1e9,c=-1e9,d=-1e9;ps.forEach(p=>{a=Math.min(a,p.x);c=Math.max(c,p.x);b=Math.min(b,p.y);d=Math.max(d,p.y)});
+const k=Math.max(2,Math.floor(Math.min((W-200)/Math.max(c-a,1e-6),(H-180)/Math.max(d-b,1e-6))*10)/10);$('sc').value=k;view.s=k;view.x=W/2-(a+c)/2*k;view.y=H/2+(b+d)/2*k;draw()}
+// ---- גרירה ----
+let drag=null;const pt=e=>{const r=cv.getBoundingClientRect();return P((e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height)};
+const inPoly=(p,Q)=>{let c=0;for(let i=0,j=Q.length-1;i<Q.length;j=i++)if((Q[i].y>p.y)!=(Q[j].y>p.y)&&p.x<(Q[j].x-Q[i].x)*(p.y-Q[i].y)/(Q[j].y-Q[i].y)+Q[i].x)c=!c;return c};
+cv.onpointerdown=e=>{const p=pt(e);let h=-1;for(let i=hits.length-1;i>=0;i--)if(hits[i]&&inPoly(p,hits[i])){h=i;break}if(h>=0&&h!=cur){cur=h;renderCtl()}
+drag={p,h,ox:h>=0?sh[h].ox:0,oy:h>=0?sh[h].oy:0,vx:view.x,vy:view.y};cv.setPointerCapture(e.pointerId)};
+cv.onpointermove=e=>{if(!drag)return;const p=pt(e),dx=p.x-drag.p.x,dy=p.y-drag.p.y;if(drag.h>=0){const s=sh[drag.h],q=$('snap').checked?v=>Math.round(v*2)/2:v=>Math.round(v*100)/100;s.ox=q(drag.ox+dx/view.s);s.oy=q(drag.oy-dy/view.s);if($('ox')){$('ox').value=s.ox;$('oy').value=s.oy}}else{view.x=drag.vx+dx;view.y=drag.vy+dy}draw()};
+cv.onpointerup=cv.onpointercancel=()=>drag=null;
+// ---- ייצוא ----
+function stat(m,ok){const s=$('st');s.textContent=m;s.className=ok?'ok':'er';clearTimeout(stat.t);stat.t=setTimeout(()=>s.textContent='',6000)}
+const T=[...Array(256)].map((_,n)=>{for(let k=0;k<8;k++)n=n&1?0xEDB88320^n>>>1:n>>>1;return n>>>0}),crc=b=>{let c=-1;for(const x of b)c=T[(c^x)&255]^c>>>8;return(c^-1)>>>0};
+function setDpi(buf,dpi){const u=new Uint8Array(buf),m=Math.round(dpi/.0254),c=new Uint8Array(21),dv=new DataView(c.buffer);dv.setUint32(0,9);c.set([112,72,89,115],4);dv.setUint32(8,m);dv.setUint32(12,m);c[16]=1;dv.setUint32(17,crc(c.subarray(4,17)));const o=new Uint8Array(u.length+21);o.set(u.subarray(0,33));o.set(c,33);o.set(u.subarray(33),54);return o}
+function bbox(g,w,h){const d=g.getImageData(0,0,w,h).data;let x0=w,y0=h,x1=-1,y1=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>8){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}return x1<0?null:{x:x0,y:y0,w:x1-x0+1,h:y1-y0+1}}
+function makePng(){return new Promise((res,rej)=>{if(!scene)return rej(Error('אין צורה תקינה לייצוא'));const k=3,c=document.createElement('canvas');c.width=W*k;c.height=H*k;const g=c.getContext('2d',{willReadFrequently:true});paint(g,scene,k);const bb=bbox(g,c.width,c.height);if(!bb)return rej(Error('הציור ריק'));
+const pd=14*k,out=document.createElement('canvas');out.width=bb.w+2*pd;out.height=bb.h+2*pd;const og=out.getContext('2d');if(!$('tr').checked){og.fillStyle='#fff';og.fillRect(0,0,out.width,out.height)}og.drawImage(c,bb.x,bb.y,bb.w,bb.h,pd,pd,bb.w,bb.h);
+out.toBlob(async b=>{if(!b)return rej(Error('יצירת התמונה נכשלה'));const cm=parseFloat($('cm').value)||0,dpi=cm>0?out.width/(cm/2.54):288;res(new Blob([setDpi(await b.arrayBuffer(),dpi)],{type:'image/png'}))},'image/png')})}
+function copy(){if(!navigator.clipboard||typeof ClipboardItem=='undefined')return stat('הדפדפן חוסם העתקה (נדרש https/localhost). השתמש בהורדה.',0);navigator.clipboard.write([new ClipboardItem({'image/png':makePng()})]).then(()=>stat('הועתק! ב-Word: Ctrl+V',1)).catch(e=>stat('ההעתקה נכשלה: '+(e.message||''),0))}
+function dl(b,n){const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}
+const dlPng=()=>makePng().then(b=>{dl(b,'shapes.png');stat('ירד PNG (גודל טבעי ב-Word, 288 DPI)',1)}).catch(e=>stat(e.message,0));
+function svg(S){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;const inc=(x,y)=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)};
+S.forEach(e=>{if(e.t=='poly')e.pts.forEach(p=>inc(p.x,p.y));else if(e.t=='line'){inc(e.x1,e.y1);inc(e.x2,e.y2)}else if(e.t=='arc'||e.t=='circ'){inc(e.cx-e.r,e.cy-e.r);inc(e.cx+e.r,e.cy+e.r)}else{const w=textW(e);inc(e.x-w/2,e.y-e.size*.6);inc(e.x+w/2,e.y+e.size*.6)}});
+const pd=14,r=v=>Math.round(v*100)/100,vx=x0-pd,vy=y0-pd,vw=x1-x0+2*pd,vh=y1-y0+2*pd;let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${r(vw)}" height="${r(vh)}" viewBox="${r(vx)} ${r(vy)} ${r(vw)} ${r(vh)}">\n`;if(!$('tr').checked)s+=`<rect x="${r(vx)}" y="${r(vy)}" width="${r(vw)}" height="${r(vh)}" fill="#fff"/>\n`;
+S.forEach(e=>{if(e.t=='poly')s+=`<${e.close?'polygon':'polyline'} points="${e.pts.map(p=>r(p.x)+','+r(p.y)).join(' ')}" fill="${e.fill||'none'}" stroke="${e.stroke}" stroke-width="${e.w}" stroke-linejoin="round" stroke-linecap="round"/>\n`;
+else if(e.t=='line')s+=`<line x1="${r(e.x1)}" y1="${r(e.y1)}" x2="${r(e.x2)}" y2="${r(e.y2)}" stroke="${e.stroke}" stroke-width="${e.w}" stroke-linecap="round"${e.dash?` stroke-dasharray="${e.dash.join(' ')}"`:''}/>\n`;
+else if(e.t=='arc'){const b=e.a0+e.d;s+=`<path d="M ${r(e.cx+e.r*Math.cos(e.a0))} ${r(e.cy+e.r*Math.sin(e.a0))} A ${r(e.r)} ${r(e.r)} 0 0 ${e.d>0?1:0} ${r(e.cx+e.r*Math.cos(b))} ${r(e.cy+e.r*Math.sin(b))}" fill="none" stroke="${e.stroke}" stroke-width="${e.w}" stroke-linecap="round"/>\n`}
+else if(e.t=='circ')s+=`<circle cx="${r(e.cx)}" cy="${r(e.cy)}" r="${r(e.r)}" fill="${e.fill||'none'}" stroke="${e.stroke}" stroke-width="${e.w}"/>\n`;
+else s+=`<text x="${r(e.x)}" y="${r(e.y)}" font-family="Times New Roman, David, serif" font-size="${e.size}" text-anchor="middle" dominant-baseline="central" direction="${heb(e.s)?'rtl':'ltr'}" fill="${e.color}"${e.italic?' font-style="italic"':''}>${esc(e.s)}</text>\n`});return s+'</svg>'}
+const dlSvg=()=>scene?(dl(new Blob([svg(scene)],{type:'image/svg+xml'}),'shapes.svg'),stat('ירד SVG. ב-Word: הוספה ← תמונות ← מהמכשיר',1)):stat('אין צורה תקינה לייצוא',0);
+// ---- היסטוריה ----
+function persist(){try{localStorage.setItem('geoHist',JSON.stringify(hist))}catch(e){stat('האחסון המקומי מלא',0)}}
+function saveHist(){if(!scene)return stat('אין צורה תקינה לשמירה',0);const t=document.createElement('canvas');t.width=240;t.height=173;const g=t.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,240,173);g.drawImage(cv,0,0,240,173);
+const o={};CK.forEach(c=>o[c[0]]=$(c[0]).checked);NU.forEach(c=>o[c[0]]=$(c[0]).value);hist.unshift({id:Date.now(),th:t.toDataURL('image/jpeg',.7),d:JSON.stringify({sh,cur,view,o})});hist=hist.slice(0,30);persist();renderHist();stat('נשמר בלשונית "היסטוריה"',1)}
+function loadHist(i){const d=JSON.parse(hist[i].d);sh=d.sh;cur=d.cur;view=d.view;CK.forEach(c=>$(c[0]).checked=!!d.o[c[0]]);NU.forEach(c=>$(c[0]).value=d.o[c[0]]);tab(0);renderCtl();draw()}
+function renderHist(){$('hl').innerHTML=hist.map((h,i)=>{const n=JSON.parse(h.d).sh.length;return`<div class=hc><img src="${h.th}"><div>${new Date(h.id).toLocaleString('he-IL')} · ${n} צורות</div><div class=row><button class="s b" onclick="loadHist(${i})">טען</button><button class="s y" onclick="hist.splice(${i},1);persist();renderHist()">מחק</button></div></div>`}).join('')||'<p>עוד אין שמורים. לחץ "💾 להיסטוריה" בעורך.</p>'}
+function tab(n){$('ed').style.display=n?'none':'flex';$('hs').style.display=n?'block':'none';$('t0').className=n?'':'on';$('t1').className=n?'on':'';if(n)renderHist()}
+sh=[mk(0)];renderCtl();renderHist();fit();
+</script></body></html>

@@ -1,0 +1,21 @@
+{
+  "name": "geometry-studio",
+  "version": "1.0.0",
+  "description": "סטודיו גיאומטריה - מחולל צורות גיאומטריות",
+  "main": "main.js",
+  "author": "reemzed123",
+  "license": "UNLICENSED",
+  "scripts": { "start": "electron .", "dist:win": "electron-builder --win portable nsis" },
+  "devDependencies": { "electron": "^35.0.0", "electron-builder": "^26.0.12" },
+  "build": {
+    "appId": "il.geometry.studio",
+    "productName": "סטודיו גיאומטריה",
+    "directories": { "output": "dist" },
+    "files": ["index.html", "main.js", "preload.js", "package.json"],
+    "win": {
+      "target": [ { "target": "portable", "arch": ["x64"] }, { "target": "nsis", "arch": ["x64"] } ],
+      "artifactName": "Geometry-Studio-${version}-${arch}.${ext}"
+    },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true }
+  }
+}
